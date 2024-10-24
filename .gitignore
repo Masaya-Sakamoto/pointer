@@ -1,0 +1,7 @@
+/.vscode
+/a.out
+/gemm_varlen
+/perf.atl.data
+/perf.data
+/perf.data.old
+/write1darray
