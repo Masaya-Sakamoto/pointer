@@ -95,45 +95,53 @@ inline void transpose_1b_16x16(const uint8_t *__restrict pSrc, ptrdiff_t srcLine
 
     __m256i b0 = _mm256_unpacklo_epi8(a0, a1); // latency: 1.0, throughput: 0.5
     __m256i b1 = _mm256_unpacklo_epi8(a2, a3);
+    a0 = _mm256_unpacklo_epi16(b0, b1); // latency: 1.0, throughput: 0.5
+    a2 = _mm256_unpackhi_epi16(b0, b1);
+
     __m256i b2 = _mm256_unpacklo_epi8(a4, a5);
     __m256i b3 = _mm256_unpacklo_epi8(a6, a7);
+    a1 = _mm256_unpacklo_epi16(b2, b3);
+    a3 = _mm256_unpackhi_epi16(b2, b3);
+
     __m256i b4 = _mm256_unpackhi_epi8(a0, a1);
     __m256i b5 = _mm256_unpackhi_epi8(a2, a3);
+    a4 = _mm256_unpacklo_epi16(b4, b5);
+    a6 = _mm256_unpackhi_epi16(b4, b5);
+
     __m256i b6 = _mm256_unpackhi_epi8(a4, a5);
     __m256i b7 = _mm256_unpackhi_epi8(a6, a7);
-
-    a0 = _mm256_unpacklo_epi16(b0, b1); // latency: 1.0, throughput: 0.5
-    a1 = _mm256_unpacklo_epi16(b2, b3);
-    a2 = _mm256_unpackhi_epi16(b0, b1);
-    a3 = _mm256_unpackhi_epi16(b2, b3);
-    a4 = _mm256_unpacklo_epi16(b4, b5);
     a5 = _mm256_unpacklo_epi16(b6, b7);
-    a6 = _mm256_unpackhi_epi16(b4, b5);
     a7 = _mm256_unpackhi_epi16(b6, b7);
 
-    b0 = _mm256_unpacklo_epi32(a0, a1); // latency: 1.0, throughput: 0.5
-    b1 = _mm256_unpackhi_epi32(a0, a1);
-    b2 = _mm256_unpacklo_epi32(a2, a3);
-    b3 = _mm256_unpackhi_epi32(a2, a3);
-    b4 = _mm256_unpacklo_epi32(a4, a5);
-    b5 = _mm256_unpackhi_epi32(a4, a5);
-    b6 = _mm256_unpacklo_epi32(a6, a7);
-    b7 = _mm256_unpackhi_epi32(a6, a7);
-
+    b0 = _mm256_unpacklo_epi32(a0, a1);                         // latency: 1.0, throughput: 0.5
     a0 = _mm256_permute4x64_epi64(b0, _MM_SHUFFLE(3, 1, 2, 0)); // latency: 3.0, throughput: 1.0
-    a1 = _mm256_permute4x64_epi64(b1, _MM_SHUFFLE(3, 1, 2, 0));
-    a2 = _mm256_permute4x64_epi64(b2, _MM_SHUFFLE(3, 1, 2, 0));
-    a3 = _mm256_permute4x64_epi64(b3, _MM_SHUFFLE(3, 1, 2, 0));
-    a4 = _mm256_permute4x64_epi64(b4, _MM_SHUFFLE(3, 1, 2, 0));
-    a5 = _mm256_permute4x64_epi64(b5, _MM_SHUFFLE(3, 1, 2, 0));
-    a6 = _mm256_permute4x64_epi64(b6, _MM_SHUFFLE(3, 1, 2, 0));
-    a7 = _mm256_permute4x64_epi64(b7, _MM_SHUFFLE(3, 1, 2, 0));
     _mm256_storeu2_m128i((__m128i *)(pDst + 1 * dstLineStride), (__m128i *)(pDst + 0 * dstLineStride), a0);
+
+    b1 = _mm256_unpackhi_epi32(a0, a1);
+    a1 = _mm256_permute4x64_epi64(b1, _MM_SHUFFLE(3, 1, 2, 0));
     _mm256_storeu2_m128i((__m128i *)(pDst + 3 * dstLineStride), (__m128i *)(pDst + 2 * dstLineStride), a1);
+
+    b2 = _mm256_unpacklo_epi32(a2, a3);
+    a2 = _mm256_permute4x64_epi64(b2, _MM_SHUFFLE(3, 1, 2, 0));
     _mm256_storeu2_m128i((__m128i *)(pDst + 5 * dstLineStride), (__m128i *)(pDst + 4 * dstLineStride), a2);
+
+    b3 = _mm256_unpackhi_epi32(a2, a3);
+    a3 = _mm256_permute4x64_epi64(b3, _MM_SHUFFLE(3, 1, 2, 0));
     _mm256_storeu2_m128i((__m128i *)(pDst + 7 * dstLineStride), (__m128i *)(pDst + 6 * dstLineStride), a3);
+
+    b4 = _mm256_unpacklo_epi32(a4, a5);
+    a4 = _mm256_permute4x64_epi64(b4, _MM_SHUFFLE(3, 1, 2, 0));
     _mm256_storeu2_m128i((__m128i *)(pDst + 9 * dstLineStride), (__m128i *)(pDst + 8 * dstLineStride), a4);
+
+    b5 = _mm256_unpackhi_epi32(a4, a5);
+    a5 = _mm256_permute4x64_epi64(b5, _MM_SHUFFLE(3, 1, 2, 0));
     _mm256_storeu2_m128i((__m128i *)(pDst + 11 * dstLineStride), (__m128i *)(pDst + 10 * dstLineStride), a5);
+
+    b6 = _mm256_unpacklo_epi32(a6, a7);
+    a6 = _mm256_permute4x64_epi64(b6, _MM_SHUFFLE(3, 1, 2, 0));
     _mm256_storeu2_m128i((__m128i *)(pDst + 13 * dstLineStride), (__m128i *)(pDst + 12 * dstLineStride), a6);
+
+    b7 = _mm256_unpackhi_epi32(a6, a7);
+    a7 = _mm256_permute4x64_epi64(b7, _MM_SHUFFLE(3, 1, 2, 0));
     _mm256_storeu2_m128i((__m128i *)(pDst + 15 * dstLineStride), (__m128i *)(pDst + 14 * dstLineStride), a7);
 }
