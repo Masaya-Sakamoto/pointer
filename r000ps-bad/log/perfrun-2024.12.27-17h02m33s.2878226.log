@@ -1,0 +1,77 @@
+0 [130625934001984] INFO perfrun.launcher <> - Launcher main begin
+0 [130625934001984] INFO perfrun.launcher <> - MessageCatalogInit finished
+0 [130625934001984] INFO perfrun.launcher <> - Launcher instance created
+0 [130625934001984] INFO perfrun.launcher <> - argc = 7; cmdline = /opt/intel/oneapi/vtune/2025.0/bin64/amplxe-runss --ui-output-format xml --ui-output-fd 5 --option-file /home/msakamoto/test/pointer/r000ps/config/runss.options 
+20 [130625934001984] INFO perfrun.perfcollector <> - SEP tool path: /opt/intel/oneapi/vtune/2025.0/bin64/sep
+23 [130625934001984] INFO perfrun.launcher <> - create msngr2::ICliToolContext
+23 [130625934001984] INFO perfrun.launcher <> - create file finder object
+23 [130625934001984] INFO perfrun.launcher <> - create a result directory: pattern = /home/msakamoto/test/pointer/r000ps pid = 4294967295
+23 [130625934001984] INFO perfrun.sdk <> - checked that the directory /home/msakamoto/test/pointer/r000ps is a local directory
+23 [130625934001984] INFO perfrun.sdk <> - the directory /home/msakamoto/test/pointer/r000ps is a local directory with FS type ID 61267
+23 [130625934001984] INFO perfrun.launcher <> - create data directory = /home/msakamoto/test/pointer/r000ps/data.0
+23 [130625934001984] INFO perfrun.launcher <> - Creating the master collection flag
+30 [130625934001984] INFO perfrun.launcher <> - Done creating the master collection flag
+30 [130625709278784] INFO perfrun.launcher <> - plugin [remoteplug] was disabled because it doesn't support the given collection type.
+30 [130625709278784] INFO perfrun.sdk <> - Allocating TMU :/home/msakamoto/test/pointer/r000ps/data.0/systemcollector-2878226-oai02-gnb.sc
+30 [130625709278784] INFO perfrun.system <> - Tpss based collection
+30 [130625709278784] INFO perfrun.launcher <> - plugin [ptracecollector] was disabled because it doesn't support the given collection type.
+30 [130625709278784] INFO perfrun.launcher <> - plugin [gpu] was disabled because it doesn't support the given collection type.
+30 [130625709278784] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+30 [130625709278784] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+30 [130625709278784] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+30 [130625709278784] INFO perfrun.mrte <> - system-wide mode is 0
+30 [130625709278784] INFO perfrun.mrte <> - Getting  mrte profiling environment ...
+39 [130625709278784] INFO perfrun.mrte <> - INTEL_MRTE_DATA_DIR=/home/msakamoto/test/pointer/r000ps/data.0
+39 [130625709278784] INFO perfrun.mrte <> - INTEL_MRTE_HOST_NAME=oai02-gnb
+39 [130625709278784] INFO perfrun.mrte <> - JAVA_TOOL_OPTIONS=-agentlib:amplxe_samplingmrte_javaprof_1.0 -Dsun.boot.library.path=/opt/intel/oneapi/vtune/2025.0/lib32/runtime:/opt/intel/oneapi/vtune/2025.0/lib64/runtime
+39 [130625709278784] INFO perfrun.mrte <> - LD_LIBRARY_PATH=/opt/intel/oneapi/vtune/2025.0/lib32/runtime:/opt/intel/oneapi/vtune/2025.0/lib64/runtime:/opt/intel/oneapi/tcm/1.2/lib:/opt/intel/oneapi/umf/0.9/lib:/opt/intel/oneapi/tbb/2022.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/pti/0.10/lib:/opt/intel/oneapi/mpi/2021.14/opt/mpi/libfabric/lib:/opt/intel/oneapi/mpi/2021.14/lib:/opt/intel/oneapi/mkl/2025.0/lib:/opt/intel/oneapi/ippcp/2025.0/lib/:/opt/intel/oneapi/ipp/2022.0/lib:/opt/intel/oneapi/dnnl/2025.0/lib:/opt/intel/oneapi/debugger/2025.0/opt/debugger/lib:/opt/intel/oneapi/dal/2025.0/lib:/opt/intel/oneapi/compiler/2025.0/opt/compiler/lib:/opt/intel/oneapi/compiler/2025.0/lib:/opt/intel/oneapi/ccl/2021.14/lib/
+39 [130625709278784] INFO perfrun.mrte <> - CORECLR_ENABLE_PROFILING=1
+39 [130625709278784] INFO perfrun.mrte <> - CORECLR_PROFILER={AA5E4821-E3B1-479c-B7FF-5AD047D22CED}
+39 [130625709278784] INFO perfrun.mrte <> - CORECLR_PROFILER_PATH=/opt/intel/oneapi/vtune/2025.0/lib64/libamplxe_samplingmrte_clrprof_1.0.so
+39 [130625709278784] INFO perfrun.mrte <> - INTEL_MRTE_PROFILER_MODE=mixed
+39 [130625709278784] INFO perfrun.mrte <> - Data directory: /home/msakamoto/test/pointer/r000ps/data.0
+39 [130625709278784] INFO perfrun.mrte <> - Mrte plugin is initialized
+39 [130625709278784] INFO perfrun.launcher <> - plugin [emon] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [cuscol] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [stdsrc] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [sep] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [vtsspp] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [perf] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [aoclprofile] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.tpss <> - initialize tpss controller
+39 [130625709278784] INFO perfrun.tpss <> - configure collection mode: value = cpu:counters:nostack
+39 [130625709278784] INFO perfrun.tpss <> - configure collection mode: value = cpu:nostack
+39 [130625709278784] INFO perfrun.tpss <> - default obj-size-min=1024
+39 [130625709278784] INFO perfrun.tpss <> - default hash-table-size=0
+39 [130625709278784] INFO perfrun.launcher <> - plugin [media] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [parallelfs] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [power] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [ipmwatch] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [os_counters] was disabled because it doesn't support the given collection type.
+39 [130625709278784] INFO perfrun.launcher <> - plugin [l0_metrics] was disabled because it doesn't support the given collection type.
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: LD_LIBRARY_PATH = /opt/intel/oneapi/vtune/2025.0/lib32/runtime:/opt/intel/oneapi/vtune/2025.0/lib64/runtime:/opt/intel/oneapi/tcm/1.2/lib:/opt/intel/oneapi/umf/0.9/lib:/opt/intel/oneapi/tbb/2022.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/pti/0.10/lib:/opt/intel/oneapi/mpi/2021.14/opt/mpi/libfabric/lib:/opt/intel/oneapi/mpi/2021.14/lib:/opt/intel/oneapi/mkl/2025.0/lib:/opt/intel/oneapi/ippcp/2025.0/lib/:/opt/intel/oneapi/ipp/2022.0/lib:/opt/intel/oneapi/dnnl/2025.0/lib:/opt/intel/oneapi/debugger/2025.0/opt/debugger/lib:/opt/intel/oneapi/dal/2025.0/lib:/opt/intel/oneapi/compiler/2025.0/opt/compiler/lib:/opt/intel/oneapi/compiler/2025.0/lib:/opt/intel/oneapi/ccl/2021.14/lib/
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: INTEL_LIBITTNOTIFY32 = /opt/intel/oneapi/vtune/2025.0/lib32/runtime/libittnotify_collector.so
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: INTEL_LIBITTNOTIFY64 = /opt/intel/oneapi/vtune/2025.0/lib64/runtime/libittnotify_collector.so
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: INTEL_ITTNOTIFY_GROUPS = 
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: INTEL_JIT_PROFILER32 = /opt/intel/oneapi/vtune/2025.0/lib32/runtime/libittnotify_collector.so
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: INTEL_JIT_PROFILER64 = /opt/intel/oneapi/vtune/2025.0/lib64/runtime/libittnotify_collector.so
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: CCL_ITT_LEVEL = 1
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: ENABLE_JITPROFILING = 1
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: CL_CONFIG_USE_VTUNE = True
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: KMP_FORKJOIN_FRAMES = 0
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: KMP_FORKJOIN_FRAMES_MODE = 0
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: INTEL_MRTE_DATA_DIR = /home/msakamoto/test/pointer/r000ps/data.0
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: INTEL_MRTE_HOST_NAME = oai02-gnb
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: JAVA_TOOL_OPTIONS = -agentlib:amplxe_samplingmrte_javaprof_1.0 -Dsun.boot.library.path=/opt/intel/oneapi/vtune/2025.0/lib32/runtime:/opt/intel/oneapi/vtune/2025.0/lib64/runtime
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: LD_LIBRARY_PATH = /opt/intel/oneapi/vtune/2025.0/lib32/runtime:/opt/intel/oneapi/vtune/2025.0/lib64/runtime:/opt/intel/oneapi/tcm/1.2/lib:/opt/intel/oneapi/umf/0.9/lib:/opt/intel/oneapi/tbb/2022.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/pti/0.10/lib:/opt/intel/oneapi/mpi/2021.14/opt/mpi/libfabric/lib:/opt/intel/oneapi/mpi/2021.14/lib:/opt/intel/oneapi/mkl/2025.0/lib:/opt/intel/oneapi/ippcp/2025.0/lib/:/opt/intel/oneapi/ipp/2022.0/lib:/opt/intel/oneapi/dnnl/2025.0/lib:/opt/intel/oneapi/debugger/2025.0/opt/debugger/lib:/opt/intel/oneapi/dal/2025.0/lib:/opt/intel/oneapi/compiler/2025.0/opt/compiler/lib:/opt/intel/oneapi/compiler/2025.0/lib:/opt/intel/oneapi/ccl/2021.14/lib/
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: CORECLR_ENABLE_PROFILING = 1
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: CORECLR_PROFILER = {AA5E4821-E3B1-479c-B7FF-5AD047D22CED}
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: CORECLR_PROFILER_PATH = /opt/intel/oneapi/vtune/2025.0/lib64/libamplxe_samplingmrte_clrprof_1.0.so
+39 [130625934001984] INFO perfrun.launcher <> - set environment variable: INTEL_MRTE_PROFILER_MODE = mixed
+39 [130625934001984] INFO perfrun.launcher <> - RpcServer: run RPC server to handle requests
+39 [130625934001984] ERROR perfrun.launcher <> - Messenger::say: Binary `a.out' cannot be executed. Suggestion: Make sure the file exists, specified location is correct, and you have privileges to run the file.
+39 [130625934001984] INFO perfrun.launcher <> - Application exit code: 0
+39 [130625934001984] INFO perfrun.launcher <> - Exit code: 1

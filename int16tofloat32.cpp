@@ -13,6 +13,12 @@ int main()
     intArray = (c16_t *)aligned_alloc(64, sizeof(c16_t) * N);
     floatArray = (cf_t *)aligned_alloc(64, sizeof(cf_t) * N);
     int i;
+
+    for (i = 0; i < N; i++)
+    {
+        intArray[i].r = i;
+        intArray[i].i = i * i;
+    }
     // FILE *fp;
 
     // test int16 -> float mnemonic
