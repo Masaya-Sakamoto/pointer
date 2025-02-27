@@ -29,7 +29,7 @@ void QWORDMemcpyWithMaskAndShift(uint8_t *input, uint8_t *output, uint64_t mask,
 	*(uint64_t *)output = value;
 }
 
-void QWORDMemcpyWithMaskAndPeriodic1Shift(uint8_t *input, uint8_t *output)
+void QWORDMemcpyWithPeriodic1Shift(uint8_t *input, uint8_t *output)
 {
 	const uint64_t mask = 0xffffffffffffff00;
 	const size_t shift = 8;
@@ -42,7 +42,7 @@ void QWORDMemcpyWithMaskAndPeriodic1Shift(uint8_t *input, uint8_t *output)
 	output[7] = tmp;
 }
 
-void QWORDMemcpyWithMaskAndPeriodicShift(uint8_t *input, uint8_t *output, size_t byte_shift)
+void QWORDMemcpyWithPeriodicShift(uint8_t *input, uint8_t *output, size_t byte_shift)
 {
 	const size_t qwordArraySize = sizeof(uint64_t) * BITS_PER_BYTE;
 	const uint8_t shift = ((byte_shift + sizeof(uint64_t)) % sizeof(uint64_t)) * BITS_PER_BYTE;
