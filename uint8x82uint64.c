@@ -1,8 +1,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #define SMALL_ARRAY_SIZE 8
+#define BITS_PER_BYTE 8
 
-void smallMemCpy(uint8_t *input, uint8_t *output)
+void QWORDMemcpy(uint8_t *input, uint8_t *output)
 {
 	uint64_t value = 0;
 	uint64_t *ptr = (uint64_t *)input;
@@ -11,7 +12,7 @@ void smallMemCpy(uint8_t *input, uint8_t *output)
 	*(uint64_t *)output = value;
 }
 
-void smallMemCpyWithMask(uint8_t *input, uint8_t *output, uint64_t mask)
+void QWORDMemcpyWithMask(uint8_t *input, uint8_t *output, uint64_t mask)
 {
 	uint64_t value = 0;
 	uint64_t *ptr = (uint64_t *)input;
@@ -20,16 +21,15 @@ void smallMemCpyWithMask(uint8_t *input, uint8_t *output, uint64_t mask)
 	*(uint64_t *)output = value;
 }
 
-void smallMemCpyWithMaskAndShift(uint8_t *input, uint8_t *output, uint64_t mask, size_t shift)
+void QWORDMemcpyWithMaskAndShift(uint8_t *input, uint8_t *output, uint64_t mask, size_t shift)
 {
 	uint64_t value = 0;
 	uint64_t *ptr = (uint64_t *)input;
 	value = ((*ptr) & mask) >> shift;
-	// printf("input val: %016lx\n", value);
 	*(uint64_t *)output = value;
 }
 
-void smallMemCpyWithMaskAndPeriodicShift(uint8_t *input, uint8_t *output)
+void QWORDMemcpyWithMaskAndPeriodic1Shift(uint8_t *input, uint8_t *output)
 {
 	const uint64_t mask = 0xffffffffffffff00;
 	const size_t shift = 8;
@@ -38,9 +38,22 @@ void smallMemCpyWithMaskAndPeriodicShift(uint8_t *input, uint8_t *output)
 	int8_t tmp = input[0];
 	uint64_t *ptr = (uint64_t *)input;
 	value = ((*ptr) & mask) >> shift;
-	// printf("input val: %016lx\n", value);
 	*(uint64_t *)output = value;
 	output[7] = tmp;
+}
+
+void QWORDMemcpyWithMaskAndPeriodicShift(uint8_t *input, uint8_t *output, size_t byte_shift)
+{
+	const size_t qwordArraySize = sizeof(uint64_t) * BITS_PER_BYTE;
+	const uint8_t shift = ((byte_shift + sizeof(uint64_t)) % sizeof(uint64_t)) * BITS_PER_BYTE;
+    const uint64_t mask = UINT64_MAX << shift;
+	const uint64_t tmp_mask = ~mask;
+    
+    uint64_t value = *(uint64_t *)input;
+    uint64_t tmp = (value & tmp_mask) << (qwordArraySize - shift);
+    value = (value & mask) >> shift;
+	value |= tmp;
+    *(uint64_t *)output = value;
 }
 
 int main(void)
@@ -58,7 +71,7 @@ int main(void)
 	}
 	printf("\n");
 
-	smallMemCpyWithMaskAndPeriodicShift(input, output);
+	QWORDMemcpyWithMaskAndPeriodicShift(input, output, 3);
 
 	printf("output: ");
 	for (size_t i = 0; i < SMALL_ARRAY_SIZE; i++)
