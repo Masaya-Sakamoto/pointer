@@ -62,21 +62,21 @@ int main(void)
 	uint8_t output[SMALL_ARRAY_SIZE];
 	for (size_t i = 0; i < SMALL_ARRAY_SIZE; i++)
 	{
-		input[i] = i+1;
+		input[i] = 240+i+1;
 	}
 	printf("input:  ");
 	for (size_t i = 0; i < SMALL_ARRAY_SIZE; i++)
 	{
-		printf("%u ", input[i]);
+		printf("0x%02X ", input[i]);
 	}
 	printf("\n");
 
-	QWORDMemcpyWithMaskAndPeriodicShift(input, output, 3);
+	QWORDMemcpyWithPeriodicShift(input, output, 3);
 
 	printf("output: ");
 	for (size_t i = 0; i < SMALL_ARRAY_SIZE; i++)
 	{
-		printf("%u ", output[i]);
+		printf("0x%02X ", output[i]);
 	}
 	printf("\n");
 	return 0;
