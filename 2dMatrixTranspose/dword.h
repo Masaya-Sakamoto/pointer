@@ -1,49 +1,9 @@
+#include "types.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-// ↓↓↓↓↓↓↓↓↓↓ DEFINITIONS ↓↓↓↓↓↓↓↓↓↓
-
-#define BITS_PER_BYTE 8
-#define DWORD_SIZE 8
-#define _WORD_SIZE 4
-#define HWORD_SIZE 2
-#define CHAR_SIZE 1
-#define DWORD_MASK0_EACH32 0x00000000FFFFFFFF
-#define DWORD_MASK1_EACH32 0xFFFFFFFF00000000
-#define DWORD_MASK0_EACH16 0x000000000000FFFF
-#define DWORD_MASK1_EACH16 0x00000000FFFF0000
-#define DWORD_MASK2_EACH16 0x0000FFFF00000000
-#define DWORD_MASK3_EACH16 0xFFFF000000000000
-#define DWORD_MASK0_EACH8 0x00000000000000FF
-#define DWORD_MASK1_EACH8 0x000000000000FF00
-#define DWORD_MASK2_EACH8 0x0000000000FF0000
-#define DWORD_MASK3_EACH8 0x00000000FF000000
-#define DWORD_MASK4_EACH8 0x000000FF00000000
-#define DWORD_MASK5_EACH8 0x0000FF0000000000
-#define DWORD_MASK6_EACH8 0x00FF000000000000
-#define DWORD_MASK7_EACH8 0xFF00000000000000
-
-typedef uint64_t dword_t;
-typedef uint32_t _word_t;
-typedef uint16_t hword_t;
-typedef uint8_t char_t;
-
-/// @brief Transposes a 2D matrix of _word_ elements in a block-based manner for efficient processing.
-///
-/// This function transposes a 2D matrix by processing 2x2 blocks at a time to optimize performance.
-/// If the matrix dimensions are not even, it handles the residual rows and columns separately.
-///
-/// @param src Pointer to the source _word_t array representing the input matrix.
-/// @param dst Pointer to the destination _word_t array where the transposed matrix will be stored.
-/// @param width The width (number of columns) of the matrix.
-/// @param height The height (number of rows) of the matrix.
-///
-void DWORD2x2Transpose(_word_t *src, _word_t *dst, size_t width, size_t height);
-
-// ↑↑↑↑↑↑↑↑↑↑↑ DEFINITIONS ↑↑↑↑↑↑↑↑↑↑
-
-inline void _WORD2x2TransposeKernel(_word_t **inputPtrList /* 元小行列の先頭ポインタ２個のリスト */,
+inline void _word2x2TransposeKernel(_word_t **inputPtrList /* 元小行列の先頭ポインタ２個のリスト */,
                                     _word_t **outputPtrList /* 転置先小行列の先頭ポインタ２個のリスト */)
 {
     // const dword_t upper_mask = (dword_t)0xFFFFFFFF00000000;
@@ -64,49 +24,6 @@ inline void _WORD2x2TransposeKernel(_word_t **inputPtrList /* 元小行列の先
     inputPtrList[1][0] = tmp;
     *(dword_t *)outputPtrList[0] = *(dword_t *)inputPtrList[0];
     *(dword_t *)outputPtrList[1] = *(dword_t *)inputPtrList[1];
-}
-
-void DWORD2x2Transpose(_word_t *src, _word_t *dst, size_t width, size_t height)
-{
-    size_t useKernelHeight = height / 2;
-    size_t heightResiduals = height % 2;
-    size_t useKernelWidth = width / 2;
-    size_t widthResiduals = width % 2;
-    _word_t *srcPtrs[2];
-    _word_t *dstPtrs[2];
-    size_t srcLoc, dstLoc;
-    // 先ず2x2を適用できる部分を転置する
-    for (size_t i = 0; i < useKernelHeight * width; i += 2 * width)
-    {
-        for (size_t j = 0; j < useKernelWidth; j += 2)
-        {
-            srcLoc = width * i + j;
-            dstLoc = height * j + i;
-            srcPtrs[0] = &src[srcLoc]; // TODO: この表記で問題ないか確認する
-            srcPtrs[1] = &src[srcLoc + width];
-            dstPtrs[0] = &dst[dstLoc];
-            dstPtrs[1] = &dst[dstLoc + height];
-            _WORD2x2TransposeKernel(srcPtrs, dstPtrs);
-        }
-        // 残り1列を転置する
-        if (widthResiduals == 1)
-        {
-            srcLoc = width * i + useKernelWidth;
-            dstLoc = height * useKernelWidth + i;
-            dst[dstLoc] = src[srcLoc];
-            dst[dstLoc + height] = src[srcLoc + width];
-        }
-    }
-    // 残り一行を転置する
-    if (heightResiduals == 1)
-    {
-        for (size_t j = 0; j < width; j++)
-        {
-            srcLoc = width * useKernelHeight + j;
-            dstLoc = height * j + useKernelHeight;
-            dst[dstLoc] = src[srcLoc];
-        }
-    }
 }
 
 inline void dword_unpackl_epi32(dword_t *src1, dword_t *src2, dword_t *dst)
@@ -180,7 +97,7 @@ inline void dword_unpackh_epi8(dword_t *src1, dword_t *src2, dword_t *dst)
     return;
 }
 
-inline void HWORD4x4TransposeKernel(hword_t **inputPtrList /* 元小行列の先頭ポインタ4個のリスト */,
+inline void hword4x4TransposeKernel(hword_t **inputPtrList /* 元小行列の先頭ポインタ4個のリスト */,
                                     hword_t **outputPtrList /* 転置先小行列の先頭ポインタ4個のリスト */)
 {
     // 4x4小行列の転置
@@ -206,7 +123,7 @@ inline void HWORD4x4TransposeKernel(hword_t **inputPtrList /* 元小行列の先
     return;
 }
 
-inline void CHAR8x8TransposeKernel(char_t **inputPtrList /* 元小行列の先頭ポインタ8個のリスト */,
+inline void char8x8TransposeKernel(char_t **inputPtrList /* 元小行列の先頭ポインタ8個のリスト */,
                                    char_t **outputPtrList /* 転置先小行列の先頭ポインタ8個のリスト */)
 {
     dword_t a0, a1, a2, a3, a4, a5, a6, a7;
@@ -251,7 +168,7 @@ inline void CHAR8x8TransposeKernel(char_t **inputPtrList /* 元小行列の先�
     dword_unpackh_epi32(&a6, &a7, (dword_t *)outputPtrList[7]);
 }
 
-void WORD4x4Transpose(hword_t *src, hword_t *dst, size_t width, size_t height)
+void hword4x4Transpose(hword_t *src, hword_t *dst, size_t width, size_t height)
 {
     for (size_t y = 0; y < height; ++y)
     {
@@ -261,7 +178,7 @@ void WORD4x4Transpose(hword_t *src, hword_t *dst, size_t width, size_t height)
         }
     }
 }
-void CHAR8x8Transpose(char_t *src, char_t *dst, size_t width, size_t height)
+void char8x8Transpose(char_t *src, char_t *dst, size_t width, size_t height)
 {
     for (size_t y = 0; y < height; ++y)
     {
