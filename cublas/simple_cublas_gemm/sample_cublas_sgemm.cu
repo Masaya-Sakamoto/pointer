@@ -64,13 +64,29 @@ int main()
     cudaMemcpy(h_C, d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost);
 
     // comparison C and h_C
-    for (int i = 0; i < M * N; ++i)
+    for (int m = 0; m < M; m++)
     {
-        if (fabs(C[i] - h_C[i]) > 1e-5)
+        for (int n = 0; n < N; n++)
         {
-            std::cout << "Mismatch at index " << i << ": expected " << C[i] << ", got " << h_C[i] << std::endl;
+            int i = m * N + n; // Calculate the index in h_C
+            std::cout << "i: " << i << ",  C[i]: " << C[i] << ",  h_C[i]: " << h_C[i] << ",  diff: " << C[i] - h_C[i] << std::endl;
         }
     }
+    /*
+    計算結果の出力
+    i: 0,  C[i]: 1.02081,  h_C[i]: 1.02081,  diff: 0
+    i: 1,  C[i]: 0.690894,  h_C[i]: 0.690894,  diff: 0
+    i: 2,  C[i]: 0.735861,  h_C[i]: 0.735861,  diff: 0
+    i: 3,  C[i]: 1.29546,  h_C[i]: 1.29546,  diff: 0
+    i: 4,  C[i]: 1.03674,  h_C[i]: 1.03674,  diff: 0
+    i: 5,  C[i]: 0.770977,  h_C[i]: 0.770977,  diff: 0
+    i: 6,  C[i]: 0.923688,  h_C[i]: 0.923688,  diff: 0
+    i: 7,  C[i]: 0.539635,  h_C[i]: 0.539635,  diff: 0
+    i: 8,  C[i]: 0.752937,  h_C[i]: 0.752937,  diff: 0
+    i: 9,  C[i]: 0.895035,  h_C[i]: 0.895035,  diff: 0
+    i: 10,  C[i]: 0.832561,  h_C[i]: 0.832561,  diff: 0
+    i: 11,  C[i]: 0.414277,  h_C[i]: 0.414277,  diff: 0
+    */
 
     // free device memory
     cudaFree(d_A);
