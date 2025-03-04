@@ -3,9 +3,9 @@
 #include <cublas_v2.h>
 #include <iostream>
 
-#define M 2
-#define N 30720
-#define K 304
+#define M 8192
+#define N 8192
+#define K 8192
 #define ALIGN 64
 
 #define IDX(i, j, ld) ((i) * (ld) + (j)) // Row-major index macro
@@ -62,7 +62,7 @@ int main()
     cudaMalloc((void **)&d_B, K * N * sizeof(float));
     cudaMemcpy(d_B, B, K * N * sizeof(float), cudaMemcpyHostToDevice);
     cudaMalloc((void **)&d_C, M * N * sizeof(float));
-    cudaMemcpy(d_C, C, M * N * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_C, h_C, M * N * sizeof(float), cudaMemcpyHostToDevice);
     // cuBLAS sgemm
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &d_alpha, d_B, N, d_A, K, &d_beta, d_C, N);
 
@@ -70,19 +70,19 @@ int main()
     cudaMemcpy(h_C, d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost);
 
     // comparison C and h_C
-    for (int m = 0; m < M; m++)
-    {
-        for (int n = 0; n < N; n++)
-        {
-            int i = m * N + n; // Calculate the index in h_C
-            float diff = C[i] - h_C[i] > 0 ? C[i] - h_C[i] : h_C[i] - C[i];
-            if (true)
-            {
-                std::cout << "i: " << i << ",  C[i]: " << C[i] << ",  h_C[i]: " << h_C[i] << ",  diff: " << diff
-                          << std::endl;
-            }
-        }
-    }
+    // for (int m = 0; m < M; m++)
+    // {
+    //     for (int n = 0; n < N; n++)
+    //     {
+    //         int i = m * N + n; // Calculate the index in h_C
+    //         float diff = C[i] - h_C[i] > 0 ? C[i] - h_C[i] : h_C[i] - C[i];
+    //         if (diff > 8e-5)
+    //         {
+    //             std::cout << "i: " << i << ",  C[i]: " << C[i] << ",  h_C[i]: " << h_C[i] << ",  diff: " << diff
+    //                       << std::endl;
+    //         }
+    //     }
+    // }
 
     // free device memory
     cudaFree(d_A);
