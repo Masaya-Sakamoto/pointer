@@ -1,21 +1,20 @@
 #include <cblas.h>
+#include <chrono>
 #include <cstdlib>
 #include <cublas_v2.h>
 #include <iostream>
 
-#define M 8192
-#define N 8192
-#define K 8192
+#define M 2
+#define N 30720
+#define K 300
 #define ALIGN 64
 
-#define IDX(i, j, ld) ((i) * (ld) + (j)) // Row-major index macro
-
-template <typename T> void initArray(size_t elements, T *array)
+void initArray(size_t elements, float *array)
 {
     srand(0); // Seed for reproducibility
     for (size_t i = 0; i < elements; ++i)
     {
-        array[i] = static_cast<T>(rand()) / RAND_MAX;
+        array[i] = static_cast<float>(rand()) / RAND_MAX;
     }
 }
 
@@ -34,40 +33,75 @@ void print_matrix(const float *A, int rows, int cols)
 int main()
 {
     float *A, *B, *C, *h_C;
+    float *warmupA, *warmupB, *warmupC, *h_warmupC;
     A = (float *)aligned_alloc(ALIGN, M * K * sizeof(float));
     B = (float *)aligned_alloc(ALIGN, K * N * sizeof(float));
     C = (float *)aligned_alloc(ALIGN, M * N * sizeof(float));
     h_C = (float *)aligned_alloc(ALIGN, M * N * sizeof(float)); // for dump
+    warmupA = (float *)aligned_alloc(ALIGN, M * K * sizeof(float));
+    warmupB = (float *)aligned_alloc(ALIGN, K * N * sizeof(float));
+    warmupC = (float *)aligned_alloc(ALIGN, M * N * sizeof(float));
+    h_warmupC = (float *)aligned_alloc(ALIGN, M * N * sizeof(float)); // for dump
     // Initialize array
     initArray(M * K, A);
     initArray(K * N, B);
+    initArray(M * K, warmupA);
+    initArray(K * N, warmupB);
     // initArray(M * N, C);
     // initArray(M * N, h_C);
     memset(C, 0, M * N * sizeof(float));
     memset(h_C, 0, M * N * sizeof(float));
+    memset(warmupC, 0, M * N * sizeof(float));
+    memset(h_warmupC, 0, M * N * sizeof(float));
 
-    // cblas
-    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, A, K, B, N, 0.0f, C, N);
-
+    // gpu initialization
     // Initialize cuBLAS context.
     cublasHandle_t handle;
     cublasCreate(&handle);
+
+    // cpu warm up run
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, warmupA, K, warmupB, N, 0.0f, warmupC, N);
+
+    std::cout << "CPU: calculation";
+    fflush(stdout);
+    // cblas
+    auto time_point = std::chrono::high_resolution_clock::now();
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, A, K, B, N, 0.0f, C, N);
+    auto duration = std::chrono::high_resolution_clock::now() - time_point;
+    auto count = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+    std::cout << " done!  " << count << " micro seconds" << std::endl;
 
     // memcpy to device
     float *d_A, *d_B, *d_C;
     const float d_alpha = 1.0f;
     const float d_beta = 0.0f;
     cudaMalloc((void **)&d_A, M * K * sizeof(float));
-    cudaMemcpy(d_A, A, M * K * sizeof(float), cudaMemcpyHostToDevice);
     cudaMalloc((void **)&d_B, K * N * sizeof(float));
-    cudaMemcpy(d_B, B, K * N * sizeof(float), cudaMemcpyHostToDevice);
     cudaMalloc((void **)&d_C, M * N * sizeof(float));
-    cudaMemcpy(d_C, h_C, M * N * sizeof(float), cudaMemcpyHostToDevice);
+
+    // gpu warm up run
+    cudaMemcpy(d_A, warmupA, M * K * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_C, h_warmupC, M * N * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, warmupB, K * N * sizeof(float), cudaMemcpyHostToDevice);
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &d_alpha, d_B, N, d_A, K, &d_beta, d_C, N);
+    cudaMemcpy(h_warmupC, d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost);
+
+    std::cout << "GPU: calculation";
+    fflush(stdout);
+
+    cudaMemcpyAsync(d_A, A, M * K * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpyAsync(d_C, h_C, M * N * sizeof(float), cudaMemcpyHostToDevice);
+    
+    cudaMemcpyAsync(d_B, B, K * N * sizeof(float), cudaMemcpyHostToDevice);
     // cuBLAS sgemm
+    auto time_point_gpu = std::chrono::high_resolution_clock::now();
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &d_alpha, d_B, N, d_A, K, &d_beta, d_C, N);
 
     // memcpy to host
     cudaMemcpy(h_C, d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost);
+    auto duration_gpu = std::chrono::high_resolution_clock::now() - time_point_gpu;
+    auto count_gpu = std::chrono::duration_cast<std::chrono::microseconds>(duration_gpu).count();
+    std::cout << " done!  " << count_gpu << " micro seconds" << std::endl;
 
     // comparison C and h_C
     // for (int m = 0; m < M; m++)
