@@ -8,12 +8,26 @@
 #define K 2
 #define ALIGN 64
 
+#define IDX(i, j, ld) ((i) * (ld) + (j)) // Row-major index macro
+
 template <typename T> void initArray(size_t elements, T *array)
 {
     srand(0); // Seed for reproducibility
     for (size_t i = 0; i < elements; ++i)
     {
         array[i] = static_cast<T>(rand()) / RAND_MAX;
+    }
+}
+
+void print_matrix(const float *A, int rows, int cols)
+{
+    for (int i = 0; i < rows; ++i)
+    {
+        for (int j = 0; j < cols; ++j)
+        {
+            std::cout << A[i*cols + j] << " ";
+        }
+        std::cout << std::endl;
     }
 }
 
@@ -27,11 +41,13 @@ int main()
     // Initialize array
     initArray(M * K, A);
     initArray(K * N, B);
-    initArray(M * N, C);
-    initArray(M * N, h_C);
+    // initArray(M * N, C);
+    // initArray(M * N, h_C);
+    memset(C, 0, M * N * sizeof(float));
+    memset(h_C, 0, M * N * sizeof(float));
 
     // cblas
-    cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, A, M, B, K, 0.0f, C, M);
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, A, K, B, N, 0.0f, C, N);
 
     // Initialize cuBLAS context.
     cublasHandle_t handle;
@@ -48,45 +64,17 @@ int main()
     cudaMalloc((void **)&d_C, M * N * sizeof(float));
     cudaMemcpy(d_C, C, M * N * sizeof(float), cudaMemcpyHostToDevice);
     // cuBLAS sgemm
-    cublasSgemm(
-        handle, 
-        CUBLAS_OP_T, CUBLAS_OP_T, // A, B 両方を転置
-        N,                                // 結果行列の行数（実際はB^Tの行数）
-        M,                                // 結果行列の列数（実際はA^Tの列数）
-        K,                                // 内部次元
-        &d_alpha,
-        d_B, N,                 // d_B: 元のB。転置後は(N x K)となるのでリーディングディメンジョンはN
-        d_A, K,                           // d_A: 元のA。転置後は(K x M)となるのでリーディングディメンジョンはK
-        &d_beta,
-        d_C, N); // d_C: 結果を受け取る行列。row-majorでMxNの行列の場合、転置結果はNxMとなりリーディングディメンジョンはN
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &d_alpha, d_B, N, d_A, K, &d_beta, d_C, N);
 
     // memcpy to host
     cudaMemcpy(h_C, d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost);
 
     // comparison C and h_C
-    for (int m = 0; m < M; m++)
-    {
-        for (int n = 0; n < N; n++)
-        {
-            int i = m * N + n; // Calculate the index in h_C
-            std::cout << "i: " << i << ",  C[i]: " << C[i] << ",  h_C[i]: " << h_C[i] << ",  diff: " << C[i] - h_C[i] << std::endl;
-        }
-    }
-    /*
-    計算結果の出力
-    i: 0,  C[i]: 1.02081,  h_C[i]: 1.02081,  diff: 0
-    i: 1,  C[i]: 0.690894,  h_C[i]: 0.690894,  diff: 0
-    i: 2,  C[i]: 0.735861,  h_C[i]: 0.735861,  diff: 0
-    i: 3,  C[i]: 1.29546,  h_C[i]: 1.29546,  diff: 0
-    i: 4,  C[i]: 1.03674,  h_C[i]: 1.03674,  diff: 0
-    i: 5,  C[i]: 0.770977,  h_C[i]: 0.770977,  diff: 0
-    i: 6,  C[i]: 0.923688,  h_C[i]: 0.923688,  diff: 0
-    i: 7,  C[i]: 0.539635,  h_C[i]: 0.539635,  diff: 0
-    i: 8,  C[i]: 0.752937,  h_C[i]: 0.752937,  diff: 0
-    i: 9,  C[i]: 0.895035,  h_C[i]: 0.895035,  diff: 0
-    i: 10,  C[i]: 0.832561,  h_C[i]: 0.832561,  diff: 0
-    i: 11,  C[i]: 0.414277,  h_C[i]: 0.414277,  diff: 0
-    */
+    std::cout << "CBLAS result (row-major):\n";
+    print_matrix(C, M, N);
+
+    std::cout << "cuBLAS result (row-major interpreted):\n";
+    print_matrix(h_C, M, N);
 
     // free device memory
     cudaFree(d_A);
