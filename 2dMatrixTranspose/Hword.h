@@ -160,3 +160,57 @@ inline void Hword_8x4InverseTransposeKernel(_word_t **inputPtrList /* 元小行�
     _mm256_storeu_si256((__m256i *)outputPtrList[2], b2);
     _mm256_storeu_si256((__m256i *)outputPtrList[3], b3);
 }
+
+inline void Hword_8x2TransposeKernel(_word_t **inputPtrList /* 元小行列の先頭ポインタ４個のリスト */,
+                                     _word_t **outputPtrList /* 転置先小行列の先頭ポインタ４個のリスト */)
+{
+    v8i_t a0, a1;
+    v8i_t b0, b1;
+
+    // load data and store lower 32bits into different registers
+    a0 = _mm256_loadu_si256((__m256i *)inputPtrList[0]);
+    a1 = _mm256_loadu_si256((__m256i *)inputPtrList[1]);
+    b0 = _mm256_unpacklo_epi32(a0, a1);
+
+    // store residual higher 32bit into different registers
+    b1 = _mm256_unpackhi_epi32(a0, a1);
+
+    // TODO: put some comment here
+    a0 = _mm256_unpacklo_epi64(b0, b1); // 0lo 4lo
+    a1 = _mm256_unpackhi_epi64(b0, b1); // 1lo 5lo
+
+    // TODO: put some comment here
+    b0 = _mm256_permute2x128_si256(a0, a1, 0x20);
+    b1 = _mm256_permute2x128_si256(a0, a1, 0x31);
+
+    // store the result to outputPtrList
+    _mm256_storeu_si256((__m256i *)outputPtrList[0], b0);
+    _mm256_storeu_si256((__m256i *)outputPtrList[1], b1);
+}
+
+inline void Hword_8x2InverseTransposeKernel(_word_t **inputPtrList /* 元小行列の先頭ポインタ４個のリスト */,
+                                            _word_t **outputPtrList /* 転置先小行列の先頭ポインタ４個のリスト */)
+{
+    v8i_t a0, a1;
+    v8i_t b0, b1;
+
+    // load data and store lower 128bits into different registers
+    a0 = _mm256_loadu_si256((__m256i *)inputPtrList[0]);
+    a1 = _mm256_loadu_si256((__m256i *)inputPtrList[1]);
+    b0 = _mm256_permute2x128_si256(a0, a1, 0x20);
+
+    // store residual higher 32bit into different registers
+    b1 = _mm256_permute2x128_si256(a0, a1, 0x31);
+
+    // TODO: put some comment here
+    a0 = _mm256_unpacklo_epi64(b0, b1); // 0lo 4lo
+    a1 = _mm256_unpackhi_epi64(b0, b1); // 1lo 5lo
+
+    // TODO: put some comment here
+    b0 = _mm256_unpacklo_epi32(a0, a1);
+    b1 = _mm256_unpackhi_epi32(a0, a1);
+
+    // store the result to outputPtrList
+    _mm256_storeu_si256((__m256i *)outputPtrList[0], b0);
+    _mm256_storeu_si256((__m256i *)outputPtrList[1], b1);
+}
