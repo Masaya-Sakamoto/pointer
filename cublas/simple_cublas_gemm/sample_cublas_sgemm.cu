@@ -3,9 +3,9 @@
 #include <cublas_v2.h>
 #include <iostream>
 
-#define M 3
-#define N 4
-#define K 2
+#define M 2
+#define N 30720
+#define K 304
 #define ALIGN 64
 
 #define IDX(i, j, ld) ((i) * (ld) + (j)) // Row-major index macro
@@ -25,7 +25,7 @@ void print_matrix(const float *A, int rows, int cols)
     {
         for (int j = 0; j < cols; ++j)
         {
-            std::cout << A[i*cols + j] << " ";
+            std::cout << A[i * cols + j] << " ";
         }
         std::cout << std::endl;
     }
@@ -70,11 +70,19 @@ int main()
     cudaMemcpy(h_C, d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost);
 
     // comparison C and h_C
-    std::cout << "CBLAS result (row-major):\n";
-    print_matrix(C, M, N);
-
-    std::cout << "cuBLAS result (row-major interpreted):\n";
-    print_matrix(h_C, M, N);
+    for (int m = 0; m < M; m++)
+    {
+        for (int n = 0; n < N; n++)
+        {
+            int i = m * N + n; // Calculate the index in h_C
+            float diff = C[i] - h_C[i] > 0 ? C[i] - h_C[i] : h_C[i] - C[i];
+            if (true)
+            {
+                std::cout << "i: " << i << ",  C[i]: " << C[i] << ",  h_C[i]: " << h_C[i] << ",  diff: " << diff
+                          << std::endl;
+            }
+        }
+    }
 
     // free device memory
     cudaFree(d_A);
