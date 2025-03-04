@@ -2,6 +2,7 @@
 #define DGEMM_TEST_H
 
 #include <stdlib.h>
+#include <stdint.h>
 #include "cblas.h"
 
 typedef void (*dgemm_func_t) 

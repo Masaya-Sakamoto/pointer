@@ -1,0 +1,4 @@
+ftimer.o: ftimer.c /usr/include/stdc-predef.h ../config.h Timer.h
+/usr/include/stdc-predef.h:
+../config.h:
+Timer.h:
