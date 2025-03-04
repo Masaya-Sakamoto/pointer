@@ -5,3 +5,6 @@
 /perf.data
 /perf.data.old
 /write1darray
+**/*.o
+**/*.so
+**/*.a
