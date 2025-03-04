@@ -2,10 +2,10 @@ CC=gcc
 FCC=gfortran
 
 CFLAGS=-O3 -mavx2 --std=c11 -fopenmp -I./include/ -I./src/ -I./test/
-LDFLAGS=-L./lib/
+LDFLAGS=-L./lib/ -L/usr/lib/gcc/x86_64-linux-gnu/11/
 #LDFLAGS=-L./lib/ -L/usr/local/Cellar/openblas/0.3.10_1/lib/
 #LDFLAGS=-L./lib/ -L/usr/local/Cellar/atlas/lib/
-LIBS=-lcpuid -ltimer
+LIBS=-lcpuid -ltimer -lm -lgfortran
 CBLASLIBS= -lcblas -lblas
 #CBLASLIBS= -lcblas -lopenblas
 #CBLASLIBS=  -lcblas_atlas -latlas
