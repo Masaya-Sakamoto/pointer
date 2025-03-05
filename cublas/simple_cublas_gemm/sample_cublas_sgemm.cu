@@ -4,7 +4,7 @@
 #include <cublas_v2.h>
 #include <iostream>
 
-#define M 2
+#define M 8
 #define N 30720
 #define K 300
 #define ALIGN 64
@@ -80,6 +80,7 @@ int main()
     cudaMalloc((void **)&d_C, M * N * sizeof(float));
 
     // gpu warm up run
+    // cublasSetMatrix(); // 　cudamemcpyの代わりにこれを使うと良いかも
     cudaMemcpy(d_A, warmupA, M * K * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_C, h_warmupC, M * N * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_B, warmupB, K * N * sizeof(float), cudaMemcpyHostToDevice);
@@ -91,7 +92,7 @@ int main()
 
     cudaMemcpyAsync(d_A, A, M * K * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpyAsync(d_C, h_C, M * N * sizeof(float), cudaMemcpyHostToDevice);
-    
+
     cudaMemcpyAsync(d_B, B, K * N * sizeof(float), cudaMemcpyHostToDevice);
     // cuBLAS sgemm
     auto time_point_gpu = std::chrono::high_resolution_clock::now();
