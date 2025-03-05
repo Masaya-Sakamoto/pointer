@@ -14,7 +14,7 @@ void sigill_handler(int signum) {
 // ※ %% を使ってアセンブリ内の % をエスケープしています
 #define TEST_YMM(n) \
 __attribute__((noinline)) void test_ymm##n(void) { \
-    __asm__ volatile("vmovdqa %%ymm" #n ", %%ymm" #n :::); \
+    __asm__ volatile("vmovdqa32 %%ymm" #n ", %%ymm" #n :::); \
 }
 
 // YMM0～YMM31の関数を生成
