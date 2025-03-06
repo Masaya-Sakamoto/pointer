@@ -4,15 +4,16 @@
 #include <iostream>
 
 #define DEBUG
+// #define INFO
 #define CBLAS
 
 #ifdef CBLAS
 #include <cblas.h>
 #endif
 
-#define M 4
-#define N 30720 * 2
-#define K 320 * 16
+#define M 2
+#define N 61440
+#define K 3200
 #define ALIGN 64
 
 void initArray(size_t elements, float *array)
@@ -89,7 +90,9 @@ int main()
     std::cout << "CPU: calculation";
     fflush(stdout);
     auto cpu_start = std::chrono::high_resolution_clock::now();
+#ifdef DEBUG
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, A, K, B, N, 0.0f, C, N);
+#endif
     auto cpu_duration = std::chrono::high_resolution_clock::now() - cpu_start;
     auto cpu_us = std::chrono::duration_cast<std::chrono::microseconds>(cpu_duration).count();
     std::cout << " done!  " << cpu_us << " μs\n";
@@ -116,6 +119,13 @@ int main()
     cudaMemcpyAsync(d_C, h_C, M * N * sizeof(float), cudaMemcpyHostToDevice, stream);
     cudaStreamSynchronize(stream);
 
+    // #ifdef DEBUG
+    //     // GPU timing (kernel + result copy-back)
+    //     std::cout << "GPU: calculation";
+    //     fflush(stdout);
+    //     auto gpu_start = std::chrono::high_resolution_clock::now();
+    // #endif
+
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &d_alpha, d_B, N, d_A, K, &d_beta, d_C, N);
     cudaMemcpyAsync(h_C, d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost, stream);
     cudaStreamSynchronize(stream);
@@ -140,8 +150,10 @@ int main()
             if (fabsf(cblas_val - cublas_val) > 1e-6f)
             {
                 results_match = false;
+#ifdef INFO
                 printf("Mismatch at position (%d, %d): CBLAS=%.4f vs cuBLAS=%.4f\n", i + 1, j + 1, cblas_val,
                        cublas_val);
+#endif
             }
         }
     }
