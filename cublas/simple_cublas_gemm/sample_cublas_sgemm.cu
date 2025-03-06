@@ -10,14 +10,14 @@
 #include <cblas.h>
 #endif
 
-#define M 2
-#define N 30720
-#define K 304
+#define M 4
+#define N 30720 * 2
+#define K 320 * 16
 #define ALIGN 64
 
 void initArray(size_t elements, float *array)
 {
-    srand(0);
+    srand(0); // Seed for reproducibility
     for (size_t i = 0; i < elements; ++i)
     {
         array[i] = static_cast<float>(rand()) / RAND_MAX;
@@ -41,12 +41,12 @@ int main()
     float *A, *B, *C;
     float *h_A, *h_B, *h_C;
 
-    // Allocate aligned memory for better performance
+    // Allocate main memory (aligned)
     A = (float *)aligned_alloc(ALIGN, M * K * sizeof(float));
     B = (float *)aligned_alloc(ALIGN, K * N * sizeof(float));
     C = (float *)aligned_alloc(ALIGN, M * N * sizeof(float));
 
-    // Allocate pinned host memory for efficient cudaMemcpy
+    // Allocate page-locked host memory
     cudaHostAlloc((void **)&h_A, M * K * sizeof(float), cudaHostAllocDefault);
     cudaHostAlloc((void **)&h_B, K * N * sizeof(float), cudaHostAllocDefault);
     cudaHostAlloc((void **)&h_C, M * N * sizeof(float), cudaHostAllocDefault);
@@ -56,112 +56,118 @@ int main()
     initArray(K * N, B);
     initArray(M * N, C);
 
-    // Copy data to host pinned memory
+    // Copy to page-locked host buffers
     memcpy(h_A, A, M * K * sizeof(float));
     memcpy(h_B, B, K * N * sizeof(float));
     memcpy(h_C, C, M * N * sizeof(float));
 
-    // Initialize cuBLAS context and stream
+    // GPU initialization
     cublasHandle_t handle;
-    cudaStream_t stream;
-
-    cudaStreamCreate(&stream);
     cublasCreate(&handle);
-    cublasSetStream(handle, stream);
+    cudaStream_t stream;
+    cudaStreamCreate(&stream);
+    cublasSetStream(handle, stream); // Associate cuBLAS with stream
 
-    // Allocate device memory
     float *d_A, *d_B, *d_C;
     const float d_alpha = 1.0f;
     const float d_beta = 0.0f;
+    cudaMalloc(&d_A, M * K * sizeof(float));
+    cudaMalloc(&d_B, K * N * sizeof(float));
+    cudaMalloc(&d_C, M * N * sizeof(float));
 
-    cudaMalloc((void **)&d_A, M * K * sizeof(float));
-    cudaMalloc((void **)&d_B, K * N * sizeof(float));
-    cudaMalloc((void **)&d_C, M * N * sizeof(float));
-
-    // GPU warm-up run
+    // Warm-up: Async data transfer and SGEMM
     cudaMemcpyAsync(d_A, h_A, M * K * sizeof(float), cudaMemcpyHostToDevice, stream);
     cudaMemcpyAsync(d_B, h_B, K * N * sizeof(float), cudaMemcpyHostToDevice, stream);
     cudaMemcpyAsync(d_C, h_C, M * N * sizeof(float), cudaMemcpyHostToDevice, stream);
+    cudaStreamSynchronize(stream);
 
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &d_alpha, d_B, N, d_A, K, &d_beta, d_C, N);
     cudaStreamSynchronize(stream);
 
-    // CPU and GPU computation timing
 #ifdef DEBUG
-    std::cout << "CPU: calculation ";
+    // CPU timing
+    std::cout << "CPU: calculation";
     fflush(stdout);
-
-    auto time_point = std::chrono::high_resolution_clock::now();
-#endif
+    auto cpu_start = std::chrono::high_resolution_clock::now();
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, A, K, B, N, 0.0f, C, N);
-
-#ifdef DEBUG
-    auto duration = std::chrono::high_resolution_clock::now() - time_point;
-    auto count = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
-    std::cout << "done!   " << count << " micro seconds" << std::endl;
+    auto cpu_duration = std::chrono::high_resolution_clock::now() - cpu_start;
+    auto cpu_us = std::chrono::duration_cast<std::chrono::microseconds>(cpu_duration).count();
+    std::cout << " done!  " << cpu_us << " μs\n";
 #endif
 
-    // Re-initialize arrays for GPU computation
+    // Reinitialize data
     initArray(M * K, A);
     initArray(K * N, B);
     initArray(M * N, C);
-
     memcpy(h_A, A, M * K * sizeof(float));
     memcpy(h_B, B, K * N * sizeof(float));
     memcpy(h_C, C, M * N * sizeof(float));
 
-    // Copy data to device
+#ifdef DEBUG
+    // GPU timing (kernel + result copy-back)
+    std::cout << "GPU: calculation";
+    fflush(stdout);
+    auto gpu_start = std::chrono::high_resolution_clock::now();
+#endif
+
+    // Pre-copy all data to GPU (excluded from timing)
     cudaMemcpyAsync(d_A, h_A, M * K * sizeof(float), cudaMemcpyHostToDevice, stream);
     cudaMemcpyAsync(d_B, h_B, K * N * sizeof(float), cudaMemcpyHostToDevice, stream);
     cudaMemcpyAsync(d_C, h_C, M * N * sizeof(float), cudaMemcpyHostToDevice, stream);
-
-#ifdef DEBUG
-    std::cout << "GPU: calculation ";
-    fflush(stdout);
-    auto time_point_gpu = std::chrono::high_resolution_clock::now();
-#endif
-
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &d_alpha, d_B, N, d_A, K, &d_beta, d_C, N);
     cudaStreamSynchronize(stream);
 
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &d_alpha, d_B, N, d_A, K, &d_beta, d_C, N);
     cudaMemcpyAsync(h_C, d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost, stream);
-    cudaStreamSynchronize(stream); // Ensure all operations are completed
+    cudaStreamSynchronize(stream);
 
 #ifdef DEBUG
-    auto duration_gpu = std::chrono::high_resolution_clock::now() - time_point_gpu;
-    auto count_gpu = std::chrono::duration_cast<std::chrono::microseconds>(duration_gpu).count();
-    std::cout << "done!   " << count_gpu << " micro seconds" << std::endl;
+    auto gpu_duration = std::chrono::high_resolution_clock::now() - gpu_start;
+    auto gpu_us = std::chrono::duration_cast<std::chrono::microseconds>(gpu_duration).count();
+    std::cout << " done!  " << gpu_us << " μs\n";
 #endif
 
-    // // Compare element-wise with tolerance
-    // for (int i = 0; i < M; ++i)
-    // {
-    //     for (int j = 0; j < N; ++j)
-    //     {
-    //         float cblas_val = C[i * N + j];
-    //         float cublas_val = h_C[i * N + j];
+#ifdef DEBUG
+    // Compare element-wise with tolerance
+    bool results_match = true;
+    for (int i = 0; i < M; ++i)
+    {
+        for (int j = 0; j < N; ++j)
+        {
+            float cblas_val = C[i * N + j];
+            float cublas_val = h_C[i * N + j];
 
-    //         // Use a tolerance to compare floating-point values
-    //         if (fabsf(cblas_val - cublas_val) > 1e-6f)
-    //         {
-    //             printf("Mismatch at position (%d, %d): CBLAS=%.4f vs cuBLAS=%.4f\n", i + 1, j + 1, cblas_val,
-    //                    cublas_val);
-    //         }
-    //     }
-    // }
+            // Use a tolerance to compare floating-point values
+            if (fabsf(cblas_val - cublas_val) > 1e-6f)
+            {
+                results_match = false;
+                printf("Mismatch at position (%d, %d): CBLAS=%.4f vs cuBLAS=%.4f\n", i + 1, j + 1, cblas_val,
+                       cublas_val);
+            }
+        }
+    }
+
+    if (results_match)
+    {
+        printf("Results match!\n");
+    }
+    else
+    {
+        printf("Results do not match within tolerance.\n");
+    }
+#endif
 
     // Cleanup
     cudaFree(d_A);
     cudaFree(d_B);
     cudaFree(d_C);
-
     cudaFreeHost(h_A);
     cudaFreeHost(h_B);
     cudaFreeHost(h_C);
-
     free(A);
     free(B);
     free(C);
+    cublasDestroy(handle);
+    cudaStreamDestroy(stream);
 
     return 0;
 }
