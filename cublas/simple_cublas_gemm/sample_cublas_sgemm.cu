@@ -4,9 +4,11 @@
 #include <cublas_v2.h>
 #include <iostream>
 
-#define M 8
+// #define DEBUG
+
+#define M 8000
 #define N 30720
-#define K 300
+#define K 30000
 #define ALIGN 64
 
 void initArray(size_t elements, float *array)
@@ -58,19 +60,6 @@ int main()
     // Initialize cuBLAS context.
     cublasHandle_t handle;
     cublasCreate(&handle);
-
-    // cpu warm up run
-    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, warmupA, K, warmupB, N, 0.0f, warmupC, N);
-
-    std::cout << "CPU: calculation";
-    fflush(stdout);
-    // cblas
-    auto time_point = std::chrono::high_resolution_clock::now();
-    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, A, K, B, N, 0.0f, C, N);
-    auto duration = std::chrono::high_resolution_clock::now() - time_point;
-    auto count = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
-    std::cout << " done!  " << count << " micro seconds" << std::endl;
-
     // memcpy to device
     float *d_A, *d_B, *d_C;
     const float d_alpha = 1.0f;
@@ -87,22 +76,36 @@ int main()
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &d_alpha, d_B, N, d_A, K, &d_beta, d_C, N);
     cudaMemcpy(h_warmupC, d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost);
 
-    std::cout << "GPU: calculation";
+#ifdef DEBUG
+    std::cout << "CPU: calculation";
     fflush(stdout);
 
+    auto time_point = std::chrono::high_resolution_clock::now();
+#endif
+    // cblas
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, A, K, B, N, 0.0f, C, N);
+#ifdef DEBUG
+    auto duration = std::chrono::high_resolution_clock::now() - time_point;
+    auto count = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+    std::cout << " done!  " << count << " micro seconds" << std::endl;
+#endif
+
+#ifdef DEBUG
+    std::cout << "GPU: calculation";
+    fflush(stdout);
+    auto time_point_gpu = std::chrono::high_resolution_clock::now();
+#endif
     cudaMemcpyAsync(d_A, A, M * K * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpyAsync(d_C, h_C, M * N * sizeof(float), cudaMemcpyHostToDevice);
-
     cudaMemcpyAsync(d_B, B, K * N * sizeof(float), cudaMemcpyHostToDevice);
-    // cuBLAS sgemm
-    auto time_point_gpu = std::chrono::high_resolution_clock::now();
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &d_alpha, d_B, N, d_A, K, &d_beta, d_C, N);
-
     // memcpy to host
     cudaMemcpy(h_C, d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost);
+#ifdef DEBUG
     auto duration_gpu = std::chrono::high_resolution_clock::now() - time_point_gpu;
     auto count_gpu = std::chrono::duration_cast<std::chrono::microseconds>(duration_gpu).count();
     std::cout << " done!  " << count_gpu << " micro seconds" << std::endl;
+#endif
 
     // comparison C and h_C
     // for (int m = 0; m < M; m++)
