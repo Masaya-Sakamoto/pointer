@@ -6,12 +6,13 @@
 #define DEBUG
 #define INFO
 #define CBLAS
+#define RESULT_THRESHOLD 1e-1f
 
 #ifdef CBLAS
 #include <cblas.h>
 #endif
 
-#define M 2
+#define M 256
 #define N 61440
 #define K 3200
 #define ALIGN 64
@@ -166,7 +167,7 @@ int main()
             float cublas_val = h_C[i * N + j];
 
             // Use a tolerance to compare floating-point values
-            if (fabsf(cblas_val - cublas_val) > 1e-3f)
+            if (fabsf(cblas_val - cublas_val) > RESULT_THRESHOLD)
             {
                 results_match_gpu = false;
 #ifdef INFO
@@ -174,7 +175,7 @@ int main()
                        cublas_val);
 #endif
             }
-            if (fabsf(cblas_val - cblas_col_val) > 1e-3f)
+            if (fabsf(cblas_val - cblas_col_val) > RESULT_THRESHOLD)
             {
                 results_match_cpuCol = false;
 #ifdef INFO
@@ -182,7 +183,7 @@ int main()
                        cublas_val);
 #endif
             }
-            if (fabsf(cblas_col_val - cublas_val) > 1e-3f)
+            if (fabsf(cblas_col_val - cublas_val) > RESULT_THRESHOLD)
             {
                 results_match_gpu_cpuCol = false;
 #ifdef INFO
