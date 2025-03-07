@@ -4,7 +4,7 @@
 #include <iostream>
 
 #define DEBUG
-#define INFO
+// #define INFO
 #define CBLAS
 #define RESULT_THRESHOLD 1e-1f
 
@@ -104,6 +104,10 @@ int main()
     memcpy(h_B, B, K * N * sizeof(float));
     memcpy(h_C, C, M * N * sizeof(float));
 
+    // cudaMemcpyAsync: A, C
+    cudaMemcpyAsync(d_A, h_A, M * K * sizeof(float), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_C, h_C, M * N * sizeof(float), cudaMemcpyHostToDevice, stream);
+
 #ifdef DEBUG
     // CPU timing
     std::cout << "CPU: calculation";
@@ -138,9 +142,7 @@ int main()
 #endif
 
     // Pre-copy all data to GPU (excluded from timing)
-    cudaMemcpyAsync(d_A, h_A, M * K * sizeof(float), cudaMemcpyHostToDevice, stream);
     cudaMemcpyAsync(d_B, h_B, K * N * sizeof(float), cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_C, h_C, M * N * sizeof(float), cudaMemcpyHostToDevice, stream);
     cudaStreamSynchronize(stream);
 
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &d_alpha, d_B, N, d_A, K, &d_beta, d_C, N);
@@ -197,43 +199,43 @@ int main()
     if (results_match_gpu)
     {
         printf("Results match!\n");
-        for (int _chk = 0; _chk < 10; _chk++)
-        {
-            int chk_id = rand() % (N * M);
-            printf("%3d, id=%9d, C=%7.4f, t_C=%7.4f\n", _chk, chk_id, C[chk_id], h_C[chk_id]);
-        }
     }
     else
     {
         printf("Results do not match within tolerance.\n");
     }
+    for (int _chk = 0; _chk < 10; _chk++)
+    {
+        int chk_id = rand() % (N * M);
+        printf("%3d, id=%9d, C=%7.4f, t_C=%7.4f\n", _chk, chk_id, C[chk_id], h_C[chk_id]);
+    }
 
     if (results_match_cpuCol)
     {
         printf("Results cpuCol match!\n");
-        for (int _chk = 0; _chk < 10; _chk++)
-        {
-            int chk_id = rand() % (N * M);
-            printf("%3d, id=%9d, C=%7.4f, t_C=%7.4f\n", _chk, chk_id, C[chk_id], t_C[chk_id]);
-        }
     }
     else
     {
         printf("Results cpuCol do not match within tolerance.\n");
     }
+    for (int _chk = 0; _chk < 10; _chk++)
+    {
+        int chk_id = rand() % (N * M);
+        printf("%3d, id=%9d, C=%7.4f, t_C=%7.4f\n", _chk, chk_id, C[chk_id], t_C[chk_id]);
+    }
 
     if (results_match_gpu_cpuCol)
     {
         printf("Results gpu_cpuCol match!\n");
-        for (int _chk = 0; _chk < 10; _chk++)
-        {
-            int chk_id = rand() % (N * M);
-            printf("%3d, id=%9d, C=%7.4f, t_C=%7.4f\n", _chk, chk_id, t_C[chk_id], h_C[chk_id]);
-        }
     }
     else
     {
         printf("Results gpu_cpuCol do not match within tolerance.\n");
+    }
+    for (int _chk = 0; _chk < 10; _chk++)
+    {
+        int chk_id = rand() % (N * M);
+        printf("%3d, id=%9d, C=%7.4f, t_C=%7.4f\n", _chk, chk_id, t_C[chk_id], h_C[chk_id]);
     }
 #endif
 
