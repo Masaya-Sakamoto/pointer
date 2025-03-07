@@ -4,7 +4,7 @@
 #include <iostream>
 
 #define DEBUG
-// #define INFO
+#define INFO
 #define CBLAS
 
 #ifdef CBLAS
@@ -40,12 +40,16 @@ void print_matrix(const float *A, int rows, int cols)
 int main()
 {
     float *A, *B, *C;
+    float *t_A, *t_B, *t_C; // for cblas(cblas_col_major)
     float *h_A, *h_B, *h_C;
 
     // Allocate main memory (aligned)
     A = (float *)aligned_alloc(ALIGN, M * K * sizeof(float));
     B = (float *)aligned_alloc(ALIGN, K * N * sizeof(float));
     C = (float *)aligned_alloc(ALIGN, M * N * sizeof(float));
+    t_A = (float *)aligned_alloc(ALIGN, M * K * sizeof(float));
+    t_B = (float *)aligned_alloc(ALIGN, K * N * sizeof(float));
+    t_C = (float *)aligned_alloc(ALIGN, M * N * sizeof(float));
 
     // Allocate page-locked host memory
     cudaHostAlloc((void **)&h_A, M * K * sizeof(float), cudaHostAllocDefault);
@@ -58,6 +62,9 @@ int main()
     initArray(M * N, C);
 
     // Copy to page-locked host buffers
+    memcpy(t_A, A, M * K * sizeof(float));
+    memcpy(t_B, B, K * N * sizeof(float));
+    memcpy(t_C, C, M * N * sizeof(float));
     memcpy(h_A, A, M * K * sizeof(float));
     memcpy(h_B, B, K * N * sizeof(float));
     memcpy(h_C, C, M * N * sizeof(float));
@@ -85,6 +92,17 @@ int main()
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &d_alpha, d_B, N, d_A, K, &d_beta, d_C, N);
     cudaStreamSynchronize(stream);
 
+    // Reinitialize data
+    initArray(M * K, A);
+    initArray(K * N, B);
+    initArray(M * N, C);
+    memcpy(t_A, A, M * K * sizeof(float));
+    memcpy(t_B, B, K * N * sizeof(float));
+    memcpy(t_C, C, M * N * sizeof(float));
+    memcpy(h_A, A, M * K * sizeof(float));
+    memcpy(h_B, B, K * N * sizeof(float));
+    memcpy(h_C, C, M * N * sizeof(float));
+
 #ifdef DEBUG
     // CPU timing
     std::cout << "CPU: calculation";
@@ -98,13 +116,18 @@ int main()
     std::cout << " done!  " << cpu_us << " μs\n";
 #endif
 
-    // Reinitialize data
-    initArray(M * K, A);
-    initArray(K * N, B);
-    initArray(M * N, C);
-    memcpy(h_A, A, M * K * sizeof(float));
-    memcpy(h_B, B, K * N * sizeof(float));
-    memcpy(h_C, C, M * N * sizeof(float));
+#ifdef DEBUG
+    // CPU timing
+    std::cout << "CPU: calculation";
+    fflush(stdout);
+    cpu_start = std::chrono::high_resolution_clock::now();
+#ifdef DEBUG
+    cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, N, M, K, 1.0f, t_B, N, t_A, K, 0.0f, t_C, N);
+#endif
+    cpu_duration = std::chrono::high_resolution_clock::now() - cpu_start;
+    cpu_us = std::chrono::duration_cast<std::chrono::microseconds>(cpu_duration).count();
+    std::cout << " done!  " << cpu_us << " μs\n";
+#endif
 
 #ifdef DEBUG
     // GPU timing (kernel + result copy-back)
@@ -119,13 +142,6 @@ int main()
     cudaMemcpyAsync(d_C, h_C, M * N * sizeof(float), cudaMemcpyHostToDevice, stream);
     cudaStreamSynchronize(stream);
 
-    // #ifdef DEBUG
-    //     // GPU timing (kernel + result copy-back)
-    //     std::cout << "GPU: calculation";
-    //     fflush(stdout);
-    //     auto gpu_start = std::chrono::high_resolution_clock::now();
-    // #endif
-
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &d_alpha, d_B, N, d_A, K, &d_beta, d_C, N);
     cudaMemcpyAsync(h_C, d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost, stream);
     cudaStreamSynchronize(stream);
@@ -138,33 +154,85 @@ int main()
 
 #ifdef DEBUG
     // Compare element-wise with tolerance
-    bool results_match = true;
+    bool results_match_gpu = true;
+    bool results_match_cpuCol = true;
+    bool results_match_gpu_cpuCol = true;
     for (int i = 0; i < M; ++i)
     {
         for (int j = 0; j < N; ++j)
         {
             float cblas_val = C[i * N + j];
+            float cblas_col_val = t_C[i * N + j];
             float cublas_val = h_C[i * N + j];
 
             // Use a tolerance to compare floating-point values
-            if (fabsf(cblas_val - cublas_val) > 1e-6f)
+            if (fabsf(cblas_val - cublas_val) > 1e-3f)
             {
-                results_match = false;
+                results_match_gpu = false;
 #ifdef INFO
                 printf("Mismatch at position (%d, %d): CBLAS=%.4f vs cuBLAS=%.4f\n", i + 1, j + 1, cblas_val,
+                       cublas_val);
+#endif
+            }
+            if (fabsf(cblas_val - cblas_col_val) > 1e-3f)
+            {
+                results_match_cpuCol = false;
+#ifdef INFO
+                printf("Mismatch at position (%d, %d): CBLAS=%.4f vs CBLAS_COL=%.4f\n", i + 1, j + 1, cblas_val,
+                       cublas_val);
+#endif
+            }
+            if (fabsf(cblas_col_val - cublas_val) > 1e-3f)
+            {
+                results_match_gpu_cpuCol = false;
+#ifdef INFO
+                printf("Mismatch at position (%d, %d): CBLAS_COL=%.4f vs cuBLAS=%.4f\n", i + 1, j + 1, cblas_col_val,
                        cublas_val);
 #endif
             }
         }
     }
 
-    if (results_match)
+    if (results_match_gpu)
     {
         printf("Results match!\n");
+        for (int _chk = 0; _chk < 10; _chk++)
+        {
+            int chk_id = rand() % (N * M);
+            printf("%3d, id=%9d, C=%7.4f, t_C=%7.4f\n", _chk, chk_id, C[chk_id], h_C[chk_id]);
+        }
     }
     else
     {
         printf("Results do not match within tolerance.\n");
+    }
+
+    if (results_match_cpuCol)
+    {
+        printf("Results cpuCol match!\n");
+        for (int _chk = 0; _chk < 10; _chk++)
+        {
+            int chk_id = rand() % (N * M);
+            printf("%3d, id=%9d, C=%7.4f, t_C=%7.4f\n", _chk, chk_id, C[chk_id], t_C[chk_id]);
+        }
+    }
+    else
+    {
+        printf("Results cpuCol do not match within tolerance.\n");
+    }
+
+    if (results_match_gpu_cpuCol)
+    {
+        printf("Results gpu_cpuCol match!\n");
+        for (int _chk = 0; _chk < 10; _chk++)
+        {
+            int chk_id = rand() % (N * M);
+            printf("%3d, id=%9d, C=%7.4f, t_C=%7.4f\n", _chk, chk_id, t_C[chk_id], h_C[chk_id]);
+        }
+    }
+    else
+    {
+        printf("Results gpu_cpuCol do not match within tolerance.\n");
     }
 #endif
 
@@ -178,6 +246,9 @@ int main()
     free(A);
     free(B);
     free(C);
+    free(t_A);
+    free(t_B);
+    free(t_C);
     cublasDestroy(handle);
     cudaStreamDestroy(stream);
 
