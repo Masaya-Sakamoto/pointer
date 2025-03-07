@@ -5,16 +5,21 @@
 
 #define DEBUG
 // #define INFO
+// #define PRINT_RESULT
+#define CUDA_MEMCPY_WAIT
+
 #define CBLAS
 #define RESULT_THRESHOLD 1e-1f
 
 #ifdef CBLAS
 #include <cblas.h>
 #endif
+#include <unistd.h>
 
-#define M 256
-#define N 61440
-#define K 3200
+#define M 1
+#define N 30720
+#define K 32
+
 #define ALIGN 64
 
 void initArray(size_t elements, float *array)
@@ -134,6 +139,10 @@ int main()
     std::cout << " done!  " << cpu_us << " μs\n";
 #endif
 
+#ifdef CUDA_MEMCPY_WAIT
+    sleep(1);
+#endif
+
 #ifdef DEBUG
     // GPU timing (kernel + result copy-back)
     std::cout << "GPU: calculation";
@@ -204,11 +213,13 @@ int main()
     {
         printf("Results do not match within tolerance.\n");
     }
+#ifdef PRINT_RESULT
     for (int _chk = 0; _chk < 10; _chk++)
     {
         int chk_id = rand() % (N * M);
         printf("%3d, id=%9d, C=%7.4f, t_C=%7.4f\n", _chk, chk_id, C[chk_id], h_C[chk_id]);
     }
+#endif
 
     if (results_match_cpuCol)
     {
@@ -218,11 +229,13 @@ int main()
     {
         printf("Results cpuCol do not match within tolerance.\n");
     }
+#ifdef PRINT_RESULT
     for (int _chk = 0; _chk < 10; _chk++)
     {
         int chk_id = rand() % (N * M);
         printf("%3d, id=%9d, C=%7.4f, t_C=%7.4f\n", _chk, chk_id, C[chk_id], t_C[chk_id]);
     }
+#endif
 
     if (results_match_gpu_cpuCol)
     {
@@ -232,11 +245,13 @@ int main()
     {
         printf("Results gpu_cpuCol do not match within tolerance.\n");
     }
+#ifdef PRINT_RESULT
     for (int _chk = 0; _chk < 10; _chk++)
     {
         int chk_id = rand() % (N * M);
         printf("%3d, id=%9d, C=%7.4f, t_C=%7.4f\n", _chk, chk_id, t_C[chk_id], h_C[chk_id]);
     }
+#endif
 #endif
 
     // Cleanup
