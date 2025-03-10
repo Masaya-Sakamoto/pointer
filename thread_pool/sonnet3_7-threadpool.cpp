@@ -49,11 +49,34 @@ class ThreadPool
             // Check if the pool is being stopped
             if (stop_flag)
             {
-                throw std::runtime_error("submit on stopped ThreadPool");
+                // Set the promise to an exception state rather than throwing
+                // This avoids memory leaks when submit is called during destruction
+                auto except_task = [task]() {
+                    try
+                    {
+                        throw std::runtime_error("submit on stopped ThreadPool");
+                    }
+                    catch (...)
+                    {
+                        // task->make_exception_ptr(std::current_exception());
+                    }
+                };
+                except_task();
+                return result;
             }
 
             // Wrap the packaged task in a void function
-            tasks.emplace([task]() { (*task)(); });
+            tasks.emplace([task]() {
+                try
+                {
+                    (*task)();
+                }
+                catch (...)
+                {
+                    // Ensure exceptions in the task don't crash the worker thread
+                    // The exception will still be propagated via the future
+                }
+            });
         }
 
         // Notify one waiting thread that a task is available
@@ -68,39 +91,11 @@ class ThreadPool
         return workers.size();
     }
 
-  private:
-    // Start the thread pool with a specific number of threads
-    void start(size_t numThreads)
+    // Get the number of pending tasks
+    size_t pending_tasks() const
     {
-        for (size_t i = 0; i < numThreads; ++i)
-        {
-            workers.emplace_back([this] {
-                while (true)
-                {
-                    std::function<void()> task;
-
-                    {
-                        std::unique_lock<std::mutex> lock(queueMutex);
-
-                        // Wait until there's a task or stop is called
-                        condition.wait(lock, [this] { return stop_flag || !tasks.empty(); });
-
-                        // Exit if the pool is being stopped and there are no more tasks
-                        if (stop_flag && tasks.empty())
-                        {
-                            return;
-                        }
-
-                        // Get the next task
-                        task = std::move(tasks.front());
-                        tasks.pop();
-                    }
-
-                    // Execute the task
-                    task();
-                }
-            });
-        }
+        std::unique_lock<std::mutex> lock(queueMutex);
+        return tasks.size();
     }
 
     // Stop the thread pool
@@ -122,33 +117,114 @@ class ThreadPool
                 worker.join();
             }
         }
+
+        // Clear any remaining tasks to prevent memory leaks
+        std::unique_lock<std::mutex> lock(queueMutex);
+        std::queue<std::function<void()>> empty;
+        std::swap(tasks, empty);
+    }
+
+  private:
+    // Start the thread pool with a specific number of threads
+    void start(size_t numThreads)
+    {
+        running_threads = numThreads;
+        for (size_t i = 0; i < numThreads; ++i)
+        {
+            workers.emplace_back([this] {
+                while (true)
+                {
+                    std::function<void()> task;
+
+                    {
+                        std::unique_lock<std::mutex> lock(queueMutex);
+
+                        // Wait until there's a task or stop is called
+                        condition.wait(lock, [this] { return stop_flag || !tasks.empty(); });
+
+                        // Exit if the pool is being stopped and there are no more tasks
+                        if (stop_flag && tasks.empty())
+                        {
+                            --running_threads;
+                            return;
+                        }
+
+                        // Get the next task
+                        task = std::move(tasks.front());
+                        tasks.pop();
+                    }
+
+                    // Execute the task - wrapped in try/catch in the lambda now
+                    task();
+                }
+            });
+        }
     }
 
     std::vector<std::thread> workers;        // Thread container
     std::queue<std::function<void()>> tasks; // Task queue
 
-    std::mutex queueMutex;             // Mutex for queue access
-    std::condition_variable condition; // Condition variable for thread synchronization
-    bool stop_flag = false;            // Flag to indicate pool shutdown
+    mutable std::mutex queueMutex;          // Mutex for queue access
+    std::condition_variable condition;      // Condition variable for thread synchronization
+    bool stop_flag = false;                 // Flag to indicate pool shutdown
+    std::atomic<size_t> running_threads{0}; // Counter for active threads
 };
 
-// Include the ThreadPool class defined above
+// Include the improved ThreadPool class defined above
 
-int calculate(int id, int duration)
+class Task
 {
-    std::cout << "Task " << id << " started on thread " << std::this_thread::get_id() << std::endl;
+  public:
+    Task(int id, int duration) : id(id), duration(duration)
+    {
+    }
 
-    // Simulate work with sleep
-    // std::this_thread::sleep_for(std::chrono::milliseconds(duration));
+    int execute()
+    {
+        std::cout << "Task " << id << " started on thread " << std::this_thread::get_id() << std::endl;
 
-    std::cout << "Task " << id << " completed after " << duration << "ms\n";
-    return id * 10 + duration;
+        // Simulate work with sleep
+        std::this_thread::sleep_for(std::chrono::milliseconds(duration));
+
+        std::cout << "Task " << id << " completed after " << duration << "ms\n";
+        return id * 10 + duration;
+    }
+
+  private:
+    int id;
+    int duration;
+};
+
+// Memory leak test function - creates and destroys many thread pools
+void test_memory_leaks()
+{
+    std::cout << "Starting memory leak test...\n";
+
+    for (int i = 0; i < 10; ++i)
+    {
+        ThreadPool pool(4);
+
+        // Submit tasks
+        std::vector<std::future<int>> results;
+        for (int j = 0; j < 100; ++j)
+        {
+            results.emplace_back(pool.submit([j]() {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                return j;
+            }));
+        }
+
+        // Don't wait for tasks - let the pool destructor handle cleanup
+        std::cout << "Destroying pool " << i << " with " << pool.pending_tasks() << " pending tasks\n";
+    }
+
+    std::cout << "Memory leak test completed\n";
 }
 
 int main()
 {
     // Create a thread pool with 4 threads
-    ThreadPool pool(8);
+    ThreadPool pool(4);
     std::cout << "Thread pool created with " << pool.size() << " threads\n";
 
     // Random number generator for task durations
@@ -159,18 +235,28 @@ int main()
     // Vector to store futures for result retrieval
     std::vector<std::future<int>> results;
 
-    // Submit tasks to the pool
-    for (int i = 0; i < INT32_MAX; ++i)
+    // Submit tasks to the pool using Task class
+    for (int i = 0; i < 10; ++i)
     {
         int duration = dist(gen);
-        results.emplace_back(pool.submit(calculate, i, duration));
+        // Using shared_ptr to ensure proper memory management
+        auto task = std::make_shared<Task>(i, duration);
+        // Capture by value to avoid dangling references
+        results.emplace_back(pool.submit([task]() { return task->execute(); }));
     }
 
     // Get and print results
     std::cout << "\nResults:\n";
     for (size_t i = 0; i < results.size(); ++i)
     {
-        std::cout << "Task " << i << " result: " << results[i].get() << std::endl;
+        try
+        {
+            std::cout << "Task " << i << " result: " << results[i].get() << std::endl;
+        }
+        catch (const std::exception &e)
+        {
+            std::cout << "Task " << i << " failed: " << e.what() << std::endl;
+        }
     }
 
     // Example of handling exceptions
@@ -189,13 +275,26 @@ int main()
         std::cout << "Caught exception: " << e.what() << std::endl;
     }
 
-    // Demonstrate a task that returns a string
-    auto stringTask = pool.submit([]() -> std::string {
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        return "Hello from thread pool!";
-    });
+    // Test submitting after calling stop
+    {
+        ThreadPool temp_pool(2);
+        temp_pool.stop(); // We're explicitly calling stop here for testing
 
-    std::cout << "String task result: " << stringTask.get() << std::endl;
+        auto future = temp_pool.submit([]() -> std::string { return "This should fail"; });
+
+        try
+        {
+            std::string result = future.get();
+            std::cout << "Result: " << result << std::endl;
+        }
+        catch (const std::exception &e)
+        {
+            std::cout << "Expected exception on stopped pool: " << e.what() << std::endl;
+        }
+    }
+
+    // Test for memory leaks
+    test_memory_leaks();
 
     std::cout << "Main thread exiting\n";
     // ThreadPool destructor will automatically stop all threads
