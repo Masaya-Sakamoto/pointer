@@ -6,6 +6,11 @@
 #include <functional>
 #include <vector>
 #include <future>
+#include <chrono>
+#include <iomanip>
+#include <iostream>
+#include <random>
+#include <type_traits>
 
 class ThreadPool {
 public:
@@ -117,3 +122,74 @@ private:
     std::condition_variable condition;             // Condition variable for thread synchronization
     bool stop_flag = false;                        // Flag to indicate pool shutdown
 };
+
+
+// Include the ThreadPool class defined above
+
+int calculate(int id, int duration)
+{
+    std::cout << "Task " << id << " started on thread " << std::this_thread::get_id() << std::endl;
+
+    // Simulate work with sleep
+    // std::this_thread::sleep_for(std::chrono::milliseconds(duration));
+
+    std::cout << "Task " << id << " completed after " << duration << "ms\n";
+    return id * 10 + duration;
+}
+
+int main()
+{
+    // Create a thread pool with 4 threads
+    ThreadPool pool(4);
+    std::cout << "Thread pool created with " << pool.size() << " threads\n";
+
+    // Random number generator for task durations
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dist(100, 1000);
+
+    // Vector to store futures for result retrieval
+    std::vector<std::future<int>> results;
+
+    // Submit tasks to the pool
+    for (int i = 0; i < INT32_MAX; ++i)
+    {
+        int duration = dist(gen);
+        results.emplace_back(pool.submit(calculate, i, duration));
+    }
+
+    // Get and print results
+    std::cout << "\nResults:\n";
+    for (size_t i = 0; i < results.size(); ++i)
+    {
+        std::cout << "Task " << i << " result: " << results[i].get() << std::endl;
+    }
+
+    // Example of handling exceptions
+    try
+    {
+        auto future = pool.submit([]() -> int {
+            throw std::runtime_error("Task failed with exception");
+            return 42;
+        });
+
+        // This will rethrow the exception
+        future.get();
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << "Caught exception: " << e.what() << std::endl;
+    }
+
+    // Demonstrate a task that returns a string
+    auto stringTask = pool.submit([]() -> std::string {
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        return "Hello from thread pool!";
+    });
+
+    std::cout << "String task result: " << stringTask.get() << std::endl;
+
+    std::cout << "Main thread exiting\n";
+    // ThreadPool destructor will automatically stop all threads
+    return 0;
+}
