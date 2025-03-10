@@ -1,5 +1,5 @@
 /.vscode
-/a.out
+**/a.out
 /gemm_varlen
 /perf.atl.data
 /perf.data
